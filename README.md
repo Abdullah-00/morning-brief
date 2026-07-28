@@ -75,14 +75,13 @@ the $5/month Workers Paid plan (30s CPU, 10,000 subrequests): call
 | Site | https://morning-brief-web.abdullah-alshoshan.workers.dev |
 | API | https://morning-brief-api.abdullah-alshoshan.workers.dev |
 | Model | `@cf/meta/llama-3.1-8b-instruct-fp8` (Workers AI) |
+| Edition job | GitHub Actions, 02:30 UTC = 05:30 Asia/Riyadh |
+| Markets refresh | Cloudflare Cron Trigger, every 15 minutes |
 
-The daily job is not yet wired up — the repo has no GitHub remote. Until it is,
-publish an edition by hand:
+To publish an edition on demand rather than waiting for the schedule:
 
 ```bash
-cd apps/api
-API_BASE_URL=https://morning-brief-api.abdullah-alshoshan.workers.dev \
-CRON_SECRET=<the deployed secret> npm run pipeline:generate
+gh workflow run edition.yml                  # or add -f dry_run=true to build without publishing
 ```
 
 ## Deploying from scratch
