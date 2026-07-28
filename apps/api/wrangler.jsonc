@@ -1,0 +1,44 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "morning-brief-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-28",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    "ENVIRONMENT": "production",
+    // Comma-separated. Empty would reflect any origin; the deployed site and the
+    // local dev server are the only two that should be able to call this.
+    "ALLOWED_ORIGINS": "https://morning-brief-web.abdullah-alshoshan.workers.dev,http://localhost:3000"
+  },
+
+  // Workers AI. No provisioning step: the binding activates the service.
+  "ai": { "binding": "AI" },
+
+  // Created with `wrangler d1 create morning-brief`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "morning-brief",
+      "database_id": "07dbf1d0-e5d9-4a2a-9701-349d55181a2a",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Created with `wrangler kv namespace create EDITION_CACHE`.
+  "kv_namespaces": [
+    {
+      "binding": "EDITION_CACHE",
+      "id": "6b029928e57e49a583b0d1ef35d28c59"
+    }
+  ],
+
+  // Markets only. The full edition is built by the generator (see README):
+  // it needs ~200ms CPU and the free plan allows 10ms per invocation.
+  // Free plan allows 5 cron triggers per account.
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  }
+}

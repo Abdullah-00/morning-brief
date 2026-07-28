@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="The Morning Brief">
+  <rect width="512" height="512" fill="#f4ecdc"/>
+  <!-- Content kept inside the 80% safe area so maskable crops do not clip it. -->
+  <rect x="128" y="160" width="256" height="6" fill="#241d14"/>
+  <text x="256" y="286" font-family="Georgia, 'Times New Roman', serif" font-size="132" font-weight="600" text-anchor="middle" fill="#241d14">MB</text>
+  <rect x="128" y="322" width="256" height="4" fill="#b3a184"/>
+  <rect x="128" y="346" width="170" height="10" rx="2" fill="#8a2b1d"/>
+</svg>

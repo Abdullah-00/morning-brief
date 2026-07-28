@@ -1,0 +1,142 @@
+@import 'tailwindcss';
+
+/*
+ * The Morning Brief — design tokens.
+ *
+ * Three papers rather than three colour schemes: sepia is the default because
+ * the brief is meant to be read at 05:30 like a printed page. Every surface is a
+ * paper stock, every rule is a hairline, and there are no cards or shadows
+ * anywhere — the hierarchy is carried by type size and white space, as in print.
+ */
+
+@theme {
+  --font-serif: var(--font-newsreader), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root,
+:root[data-theme='sepia'] {
+  --paper: #f4ecdc;
+  --paper-raised: #efe5d1;
+  --ink: #241d14;
+  --ink-muted: #6b5c47;
+  --ink-faint: #8d7d66;
+  --rule: #d3c4a8;
+  --rule-strong: #b3a184;
+  --accent: #8a2b1d;
+  --up: #2f6b3d;
+  --down: #9b2c22;
+}
+
+:root[data-theme='light'] {
+  --paper: #ffffff;
+  --paper-raised: #f7f7f5;
+  --ink: #14140f;
+  --ink-muted: #55554d;
+  --ink-faint: #7d7d74;
+  --rule: #e0e0da;
+  --rule-strong: #c2c2b8;
+  --accent: #9b2118;
+  --up: #1f6b3a;
+  --down: #a32218;
+}
+
+:root[data-theme='dark'] {
+  --paper: #14130f;
+  --paper-raised: #1c1a15;
+  --ink: #ece5d6;
+  --ink-muted: #a89e8b;
+  --ink-faint: #7e7566;
+  --rule: #332f26;
+  --rule-strong: #4a4437;
+  --accent: #d98b6a;
+  --up: #6bbd7f;
+  --down: #e0705f;
+}
+
+/* No prefers-color-scheme fallback here on purpose: the inline script in
+   layout.tsx always stamps data-theme before paint, defaulting to sepia. */
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-up: var(--up);
+  --color-down: var(--down);
+}
+
+html {
+  background-color: var(--paper);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Metadata, labels and rules are set in sans; the reading matter stays serif. */
+.font-meta {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small caps section labels, the newspaper's standing furniture. */
+.label-rule {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.headline-link {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 150ms ease;
+}
+
+.headline-link:hover {
+  text-decoration-color: var(--rule-strong);
+}
+
+/* Drop cap on the lead story only — one flourish, used once. */
+.lead-body::first-letter {
+  float: left;
+  font-size: 3.1em;
+  line-height: 0.82;
+  padding-right: 0.08em;
+  padding-top: 0.06em;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

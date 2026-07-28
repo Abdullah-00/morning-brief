@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="The Morning Brief">
+  <rect width="512" height="512" rx="72" fill="#f4ecdc"/>
+  <rect x="64" y="96" width="384" height="8" fill="#241d14"/>
+  <text x="256" y="248" font-family="Georgia, 'Times New Roman', serif" font-size="176" font-weight="600" text-anchor="middle" fill="#241d14">MB</text>
+  <rect x="64" y="300" width="384" height="4" fill="#b3a184"/>
+  <rect x="64" y="332" width="270" height="12" rx="2" fill="#8a2b1d"/>
+  <rect x="64" y="368" width="384" height="8" rx="2" fill="#d3c4a8"/>
+  <rect x="64" y="396" width="330" height="8" rx="2" fill="#d3c4a8"/>
+</svg>

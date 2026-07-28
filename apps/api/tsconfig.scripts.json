@@ -1,0 +1,14 @@
+{
+  // The generator runs in Node, not the Worker runtime, so it needs Node's
+  // globals. It imports pipeline modules that sit alongside Worker-typed code,
+  // so both type packages are loaded here; skipLibCheck keeps their overlapping
+  // DOM-ish declarations from fighting.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"],
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["scripts/**/*.ts", "src/**/*.ts"]
+}

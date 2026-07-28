@@ -1,0 +1,16 @@
+{
+  "name": "The Morning Brief",
+  "short_name": "Morning Brief",
+  "description": "A daily morning intelligence briefing: AI, Saudi Arabia, the Middle East, markets and global events.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4ecdc",
+  "theme_color": "#f4ecdc",
+  "categories": ["news", "business"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

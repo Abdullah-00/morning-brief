@@ -1,0 +1,51 @@
+name: Generate morning edition
+
+# Why this runs here and not on a Cron Trigger: clustering a morning's ingest
+# costs roughly 200ms of CPU, and the Cloudflare Workers free plan allows 10ms
+# per invocation with no way to raise it. GitHub Actions runs the CPU-heavy half
+# for free; the Worker still does Workers AI summarisation, storage and serving.
+#
+# Switching to a paid Workers plan later means moving this call in-Worker — the
+# pipeline code is identical either way.
+
+on:
+  schedule:
+    # 05:30 Asia/Riyadh = 02:30 UTC. Riyadh is a fixed UTC+3, no daylight saving.
+    # GitHub may delay scheduled runs by several minutes under load.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build the edition but do not publish it'
+        type: boolean
+        default: false
+
+concurrency:
+  group: morning-edition
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate and publish edition
+        working-directory: apps/api
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm run pipeline:dry
+          else
+            npm run pipeline:generate
+          fi

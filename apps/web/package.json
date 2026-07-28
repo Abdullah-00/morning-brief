@@ -1,0 +1,31 @@
+{
+  "name": "@morning-brief/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "preview": "npm run clean && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "clean": "rm -rf .next .open-next",
+    "deploy": "npm run clean && opennextjs-cloudflare build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@morning-brief/shared": "*",
+    "next": "16.2.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.2",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.3",
+    "wrangler": "^4.114.0"
+  }
+}

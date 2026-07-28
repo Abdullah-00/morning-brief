@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "morning-brief-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-28",
+  // Required by the OpenNext adapter.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": { "enabled": true },
+
+  // NEXT_PUBLIC_* values are inlined by `next build`, so the authoritative copy
+  // lives in .env.production. This is here only so the binding is visible in the
+  // dashboard alongside the deployment.
+  "vars": {
+    "NEXT_PUBLIC_API_BASE": "https://morning-brief-api.abdullah-alshoshan.workers.dev"
+  }
+}

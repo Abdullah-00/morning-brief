@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.open-next/
+.wrangler/
+dist/
+out/
+*.tsbuildinfo
+
+# Secrets and local overrides. `.env*.local` matters: .env.development.local
+# holds the localhost API address and must never reach a production build.
+.env
+.env*.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+.DS_Store
