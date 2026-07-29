@@ -172,6 +172,32 @@ app.post('/api/admin/edition', async (context) => {
   }
 });
 
+/**
+ * Asks GitHub to build the edition now, exactly as the 02:30 UTC cron does.
+ *
+ * Exists so the dispatch path can be exercised on demand — both to verify it
+ * after a token or workflow change, and to force a rebuild without waiting for
+ * tomorrow morning.
+ */
+app.post('/api/admin/dispatch', async (context) => {
+  const secret = context.env.CRON_SECRET;
+  if (!secret || context.req.header('X-Cron-Secret') !== secret) {
+    return context.json({ error: 'unauthorized' }, 401);
+  }
+
+  const result = await dispatchEditionWorkflow(context.env);
+  if (!result.ok) {
+    console.error('manual dispatch failed', result.status, result.error);
+    return context.json({ ok: false, status: result.status, error: result.error }, 502);
+  }
+
+  return context.json({
+    ok: true,
+    dispatched: `${context.env.GITHUB_REPO}/${context.env.GITHUB_WORKFLOW ?? 'edition.yml'}`,
+    ref: context.env.GITHUB_REF ?? 'main',
+  });
+});
+
 app.get('/health', (context) =>
   context.json({
     ok: true,
