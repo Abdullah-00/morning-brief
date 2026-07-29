@@ -19,6 +19,7 @@ import {
   draftEditionSchema,
   type DraftEdition,
   type DraftStory,
+  type EditionTrigger,
   type WatchItem,
 } from '@morning-brief/shared';
 import { SOURCES } from '../src/sources.js';
@@ -42,6 +43,16 @@ export interface GenerateResult {
     storiesWithText: number;
     marketsFailed: string[];
   };
+}
+
+/**
+ * Which trigger this run is serving, set by the workflow. Anything unrecognised
+ * (including a local run) counts as manual — only `failsafe` carries a warning,
+ * so it must never be inferred.
+ */
+function readTrigger(): EditionTrigger {
+  const raw = process.env.EDITION_TRIGGER;
+  return raw === 'scheduled' || raw === 'failsafe' ? raw : 'manual';
 }
 
 export async function generateDraft(now = new Date()): Promise<GenerateResult> {
@@ -96,6 +107,7 @@ export async function generateDraft(now = new Date()): Promise<GenerateResult> {
   const draft: DraftEdition = {
     date: riyadhDate(now),
     generatedAt: now.toISOString(),
+    publishedVia: readTrigger(),
     degraded,
     stories,
     markets: {

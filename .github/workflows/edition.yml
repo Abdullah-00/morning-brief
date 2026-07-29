@@ -23,6 +23,11 @@ on:
         description: "Skip when today's edition is already published"
         type: boolean
         default: false
+      trigger:
+        description: 'Recorded on the edition so the page can show its provenance'
+        type: choice
+        options: [manual, scheduled]
+        default: manual
 
   # Failsafe only. If the Cloudflare trigger fails, this still gets a brief out
   # the same day; on a normal morning it finds today's edition already published
@@ -56,6 +61,9 @@ jobs:
           # The scheduled failsafe must not rebuild an edition we already have.
           SKIP_IF_FRESH: ${{ github.event_name == 'schedule' || inputs.skip_if_fresh }}
           DRY_RUN: ${{ inputs.dry_run }}
+          # A `schedule` run is by definition the failsafe: the Cloudflare cron
+          # dispatches this workflow rather than relying on GitHub's scheduler.
+          EDITION_TRIGGER: ${{ github.event_name == 'schedule' && 'failsafe' || inputs.trigger }}
         run: |
           args=""
           [ "$DRY_RUN" = "true" ] && args="$args --dry-run"

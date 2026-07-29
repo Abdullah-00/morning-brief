@@ -22,7 +22,12 @@ describe('dispatchEditionWorkflow', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://api.github.com/repos/owner/repo/actions/workflows/edition.yml/dispatches');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(String(init.body))).toEqual({ ref: 'main' });
+    // The trigger travels with the dispatch so the edition can record its own
+    // provenance, which is what surfaces a failsafe publish on the masthead.
+    expect(JSON.parse(String(init.body))).toEqual({
+      ref: 'main',
+      inputs: { trigger: 'scheduled' },
+    });
 
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer test-token');

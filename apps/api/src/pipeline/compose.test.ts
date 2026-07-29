@@ -109,3 +109,24 @@ describe('directionOf', () => {
     expect(directionOf(-1.2)).toBe('down');
   });
 });
+
+describe('publishedVia', () => {
+  const base = {
+    date: '2026-07-30',
+    generatedAt: '2026-07-30T02:31:00.000Z',
+    stories: [story('a', 'ai', 0.9)],
+    markets,
+    watchToday: [],
+    degraded: [],
+  };
+
+  it('records the trigger that produced the edition', () => {
+    expect(composeEdition({ ...base, publishedVia: 'failsafe' }).publishedVia).toBe('failsafe');
+    expect(composeEdition({ ...base, publishedVia: 'scheduled' }).publishedVia).toBe('scheduled');
+  });
+
+  /** Only an explicit signal may claim `failsafe`, since it drives a warning. */
+  it('defaults to manual when the trigger is unknown', () => {
+    expect(composeEdition(base).publishedVia).toBe('manual');
+  });
+});

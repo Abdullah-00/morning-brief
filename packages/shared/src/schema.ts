@@ -98,6 +98,17 @@ export type WatchItem = z.infer<typeof watchItemSchema>;
 export const editionStatusSchema = z.enum(['live', 'updating', 'stale']);
 export type EditionStatus = z.infer<typeof editionStatusSchema>;
 
+/**
+ * Which trigger produced this edition.
+ *
+ * `failsafe` is the one that matters: the backup schedule only publishes when
+ * the 05:30 run never happened, so seeing it on the page means the primary
+ * trigger failed — most likely an expired GitHub token. Without this the
+ * failure is invisible, since a late edition still looks like an edition.
+ */
+export const editionTriggerSchema = z.enum(['scheduled', 'failsafe', 'manual']);
+export type EditionTrigger = z.infer<typeof editionTriggerSchema>;
+
 export const editionSectionsSchema = z.object({
   ai: z.array(storyClusterSchema),
   saudi: z.array(storyClusterSchema),
@@ -113,6 +124,8 @@ export const editionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   generatedAt: z.string().datetime(),
   status: editionStatusSchema,
+  /** Optional so editions stored before this field existed still parse. */
+  publishedVia: editionTriggerSchema.optional(),
   /** Names the fallbacks that fired this run, e.g. ["summaries:extractive"]. */
   degraded: z.array(z.string()),
   frontPage: z.array(storyClusterSchema),
@@ -158,6 +171,8 @@ export type DraftStory = z.infer<typeof draftStorySchema>;
 export const draftEditionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   generatedAt: z.string().datetime(),
+  /** Reported by the generator from the workflow trigger; defaults to manual. */
+  publishedVia: editionTriggerSchema.optional(),
   degraded: z.array(z.string()),
   stories: z.array(draftStorySchema),
   markets: z.object({

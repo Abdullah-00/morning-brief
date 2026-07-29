@@ -45,6 +45,8 @@ export function Masthead({ edition, isFallback }: MastheadProps) {
         </p>
       ) : null}
 
+      {edition.publishedVia === 'failsafe' ? <FailsafeNotice /> : null}
+
       {edition.degraded.length > 0 ? <DegradedNote reasons={edition.degraded} /> : null}
     </header>
   );
@@ -65,6 +67,25 @@ function StatusPill({ status }: { status: Edition['status'] }) {
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {STATUS_COPY[status]}
     </span>
+  );
+}
+
+/**
+ * Shown when the backup schedule published the edition.
+ *
+ * That only happens if the 05:30 trigger never ran, so this is the visible
+ * symptom of a broken dispatch — most likely an expired GitHub token. It sits
+ * outside the collapsed degraded list on purpose: it is not a content
+ * degradation but an operational fault, and a late brief otherwise looks
+ * exactly like an on-time one.
+ */
+function FailsafeNotice() {
+  return (
+    <p className="font-meta mt-3 border border-accent/50 px-3 py-2 text-[11px] leading-relaxed text-accent">
+      Published by the backup schedule — the 05:30 trigger did not run. The
+      briefing itself is unaffected, but it arrived later than usual and the
+      dispatch needs attention.
+    </p>
   );
 }
 

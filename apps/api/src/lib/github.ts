@@ -37,6 +37,12 @@ const GITHUB_API = 'https://api.github.com';
 export async function dispatchEditionWorkflow(
   env: GithubDispatchEnv,
   fetchImpl: typeof fetch = fetch,
+  /**
+   * Tells the generator which trigger it is serving, so the edition records its
+   * own provenance and the page can say when the failsafe had to step in.
+   * Workflow inputs are always strings over this API.
+   */
+  trigger: 'scheduled' | 'manual' = 'scheduled',
 ): Promise<DispatchResult> {
   const { GITHUB_TOKEN: token, GITHUB_REPO: repo } = env;
   const workflow = env.GITHUB_WORKFLOW ?? 'edition.yml';
@@ -62,7 +68,7 @@ export async function dispatchEditionWorkflow(
           'User-Agent': 'morning-brief-worker',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ref }),
+        body: JSON.stringify({ ref, inputs: { trigger } }),
       });
 
       // A successful dispatch is 204 No Content.

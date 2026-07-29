@@ -4,6 +4,7 @@ import {
   type Edition,
   type EditionSections,
   type EditionStatus,
+  type EditionTrigger,
   type SectionKey,
   type StoryCluster,
   type MarketsBlock,
@@ -30,6 +31,7 @@ export interface ComposeInput {
   watchToday: readonly WatchItem[];
   degraded: readonly string[];
   status?: EditionStatus;
+  publishedVia?: EditionTrigger;
 }
 
 /**
@@ -123,6 +125,7 @@ export function composeEdition(input: ComposeInput): Edition {
     date: input.date,
     generatedAt: input.generatedAt,
     status: input.status ?? 'live',
+    publishedVia: input.publishedVia ?? 'manual',
     degraded,
     frontPage,
     sections,

@@ -151,6 +151,7 @@ app.post('/api/admin/edition', async (context) => {
       markets,
       watchToday: draft.watchToday,
       degraded: [...new Set(allDegraded)],
+      publishedVia: draft.publishedVia,
     });
 
     await putEdition(context.env, edition);
