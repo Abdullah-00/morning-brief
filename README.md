@@ -75,8 +75,22 @@ the $5/month Workers Paid plan (30s CPU, 10,000 subrequests): call
 | Site | https://morning-brief-web.abdullah-alshoshan.workers.dev |
 | API | https://morning-brief-api.abdullah-alshoshan.workers.dev |
 | Model | `@cf/meta/llama-3.1-8b-instruct-fp8` (Workers AI) |
-| Edition job | GitHub Actions, 02:30 UTC = 05:30 Asia/Riyadh |
+| Edition job | Cloudflare cron at 02:30 UTC (05:30 Riyadh) dispatches the GitHub workflow |
 | Markets refresh | Cloudflare Cron Trigger, every 15 minutes |
+
+### Why the schedule lives on Cloudflare
+
+The pipeline needs a GitHub runner for CPU, but GitHub's `schedule:` event is not
+punctual: our first scheduled run was created **3h06m** after its 02:30 UTC slot,
+so a 05:30 Riyadh brief landed at 08:36. Execution itself took 56 seconds.
+Dispatched runs start immediately, so the Worker's cron — accurate to about a
+minute — now calls the GitHub API to start the workflow. A failsafe `schedule:`
+remains at 06:00 UTC and passes `--skip-if-fresh`, so on a normal morning it
+finds today's edition and exits without spending Workers AI budget.
+
+This needs one secret on the Worker: a fine-grained GitHub PAT scoped to this
+repository with **Actions: read and write**, stored via
+`wrangler secret put GITHUB_TOKEN`.
 
 To publish an edition on demand rather than waiting for the schedule:
 

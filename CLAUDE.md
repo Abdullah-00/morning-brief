@@ -9,6 +9,13 @@
   serving, Workers AI calls, and the markets refresh.
 - **Free plan also caps subrequests at 50 per invocation.** The markets refresh
   uses 9 and summarisation is capped at 20 model calls; keep the total under 50.
+- **Cloudflare owns the schedule; GitHub only owns the CPU.** These are separate
+  decisions and were once conflated: the workflow used GitHub's `schedule:`
+  event, which created our run 3h06m late and delivered a 05:30 brief at 08:36.
+  The Worker's 02:30 UTC cron now dispatches the workflow over the GitHub API
+  (`lib/github.ts`), because dispatched runs start with no queue delay. Do not
+  reintroduce a primary `schedule:` trigger. The one that remains is a failsafe
+  at 06:00 UTC and passes `--skip-if-fresh`, so it costs nothing on a normal day.
 - **Workers AI does not run under `wrangler dev --local`.** Summaries fall back
   to extraction locally, which is expected — the edition still builds. Use
   `npm run dev:remote` to exercise the real model.

@@ -141,9 +141,39 @@ export async function publishDraft(draft: DraftEdition): Promise<void> {
   console.log('published:', body);
 }
 
+/**
+ * True when an edition for today's Riyadh date has already been published.
+ *
+ * Used by the failsafe schedule so it costs nothing on a normal morning: a
+ * second run would spend another few thousand Workers AI neurons against a
+ * 10,000/day free allocation to reproduce an edition we already have.
+ */
+async function todaysEditionExists(now: Date): Promise<boolean> {
+  const baseUrl = process.env.API_BASE_URL;
+  if (!baseUrl) return false;
+
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/edition/latest`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return false;
+    const edition = (await response.json()) as { date?: string };
+    return edition.date === riyadhDate(now);
+  } catch {
+    // If we cannot tell, build it — a duplicate is cheaper than a missing brief.
+    return false;
+  }
+}
+
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
+  const skipIfFresh = process.argv.includes('--skip-if-fresh');
   const started = Date.now();
+
+  if (skipIfFresh && (await todaysEditionExists(new Date()))) {
+    console.error("today's edition is already published — nothing to do");
+    return;
+  }
 
   const { draft, report } = await generateDraft();
 

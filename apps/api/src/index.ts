@@ -7,6 +7,7 @@ import {
   type MarketsBlock,
 } from '@morning-brief/shared';
 import { selectSummarizer, type AiEnv } from './ai/provider.js';
+import { dispatchEditionWorkflow, type GithubDispatchEnv } from './lib/github.js';
 import { composeEdition } from './pipeline/compose.js';
 import { describeMarkets, fetchMarkets } from './pipeline/markets.js';
 import { summarizeMarkets, summarizeStories } from './pipeline/summarize.js';
@@ -22,12 +23,17 @@ import {
 } from './storage/index.js';
 import { hoursBetween, riyadhDate } from './lib/time.js';
 
-export interface Env extends StorageEnv, AiEnv {
+export interface Env extends StorageEnv, AiEnv, GithubDispatchEnv {
   CRON_SECRET?: string;
   /** Comma-separated origins allowed to call the API. */
   ALLOWED_ORIGINS?: string;
   ENVIRONMENT?: string;
 }
+
+/** Cron expressions, matched against `controller.cron` in scheduled(). */
+export const MARKETS_CRON = '*/15 * * * *';
+/** 02:30 UTC = 05:30 Asia/Riyadh, which is UTC+3 year-round. */
+export const EDITION_CRON = '30 2 * * *';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -210,11 +216,32 @@ export default {
   fetch: app.fetch,
 
   /**
-   * Cron. Only the market refresh runs in the Worker; generating the edition
-   * needs ~200ms of CPU against a 10ms free-plan ceiling, so it runs in the
-   * generator and arrives via POST /api/admin/edition.
+   * Cron. Two schedules:
+   *
+   *  - EDITION_CRON asks GitHub to build the morning edition. The build itself
+   *    cannot run here (~200ms CPU against a 10ms free-plan ceiling), but the
+   *    *timing* belongs on Cloudflare: its triggers are accurate to about a
+   *    minute, whereas GitHub's own `schedule:` event started our run 3h06m late.
+   *  - MARKETS_CRON re-prices the dashboard, which is cheap enough to run here.
    */
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (controller.cron === EDITION_CRON) {
+      ctx.waitUntil(
+        dispatchEditionWorkflow(env)
+          .then((result) => {
+            if (result.ok) {
+              console.log('edition workflow dispatched');
+            } else {
+              console.error('edition dispatch failed', result.status, result.error);
+            }
+          })
+          .catch((error: unknown) => {
+            console.error('edition dispatch threw', error);
+          }),
+      );
+      return;
+    }
+
     ctx.waitUntil(
       refreshMarkets(env)
         .then(async (markets) => {

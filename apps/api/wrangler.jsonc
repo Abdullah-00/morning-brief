@@ -11,7 +11,13 @@
     "ENVIRONMENT": "production",
     // Comma-separated. Empty would reflect any origin; the deployed site and the
     // local dev server are the only two that should be able to call this.
-    "ALLOWED_ORIGINS": "https://morning-brief-web.abdullah-alshoshan.workers.dev,http://localhost:3000"
+    "ALLOWED_ORIGINS": "https://morning-brief-web.abdullah-alshoshan.workers.dev,http://localhost:3000",
+
+    // Which workflow the edition cron asks GitHub to run. The token itself is a
+    // secret: `wrangler secret put GITHUB_TOKEN`.
+    "GITHUB_REPO": "Abdullah-00/morning-brief",
+    "GITHUB_WORKFLOW": "edition.yml",
+    "GITHUB_REF": "main"
   },
 
   // Workers AI. No provisioning step: the binding activates the service.
@@ -35,10 +41,13 @@
     }
   ],
 
-  // Markets only. The full edition is built by the generator (see README):
-  // it needs ~200ms CPU and the free plan allows 10ms per invocation.
-  // Free plan allows 5 cron triggers per account.
+  // Two schedules, both matched by expression in the scheduled() handler:
+  //   */15 * * * *  re-price the markets dashboard (cheap enough to run here)
+  //   30 2 * * *    02:30 UTC = 05:30 Asia/Riyadh — ask GitHub to build the
+  //                 edition. Cloudflare keeps the clock because its triggers
+  //                 fire within ~1 minute; GitHub's own scheduler ran 3h06m late.
+  // Free plan allows 3 cron triggers per Worker.
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": ["*/15 * * * *", "30 2 * * *"]
   }
 }

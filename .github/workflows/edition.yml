@@ -1,24 +1,34 @@
 name: Generate morning edition
 
-# Why this runs here and not on a Cron Trigger: clustering a morning's ingest
-# costs roughly 200ms of CPU, and the Cloudflare Workers free plan allows 10ms
-# per invocation with no way to raise it. GitHub Actions runs the CPU-heavy half
-# for free; the Worker still does Workers AI summarisation, storage and serving.
+# Why the pipeline runs here: clustering a morning's ingest costs roughly 200ms
+# of CPU, and the Cloudflare Workers free plan allows 10ms per invocation with no
+# way to raise it. GitHub supplies the CPU; Cloudflare still does everything else.
 #
-# Switching to a paid Workers plan later means moving this call in-Worker — the
-# pipeline code is identical either way.
+# Why the *timing* does NOT live here: GitHub does not guarantee when `schedule:`
+# events fire. Our first scheduled run was created 3h06m after its 02:30 UTC slot,
+# so a 05:30 Riyadh brief arrived at 08:36. Runs started by workflow_dispatch, by
+# contrast, begin with zero queue delay.
+#
+# So the API Worker's Cron Trigger (accurate to ~1 minute) calls the GitHub API to
+# dispatch this workflow at 02:30 UTC. See scheduled() in apps/api/src/index.ts.
 
 on:
-  schedule:
-    # 05:30 Asia/Riyadh = 02:30 UTC. Riyadh is a fixed UTC+3, no daylight saving.
-    # GitHub may delay scheduled runs by several minutes under load.
-    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Build the edition but do not publish it'
         type: boolean
         default: false
+      skip_if_fresh:
+        description: "Skip when today's edition is already published"
+        type: boolean
+        default: false
+
+  # Failsafe only. If the Cloudflare trigger fails, this still gets a brief out
+  # the same day; on a normal morning it finds today's edition already published
+  # and exits without spending any Workers AI budget.
+  schedule:
+    - cron: '0 6 * * *' # 09:00 Asia/Riyadh
 
 concurrency:
   group: morning-edition
@@ -29,9 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -43,9 +53,12 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # The scheduled failsafe must not rebuild an edition we already have.
+          SKIP_IF_FRESH: ${{ github.event_name == 'schedule' || inputs.skip_if_fresh }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            npm run pipeline:dry
-          else
-            npm run pipeline:generate
-          fi
+          args=""
+          [ "$DRY_RUN" = "true" ] && args="$args --dry-run"
+          [ "$SKIP_IF_FRESH" = "true" ] && args="$args --skip-if-fresh"
+          echo "running: npm run pipeline:generate -- $args"
+          npm run pipeline:generate -- $args
