@@ -1,3 +1,4 @@
+import { restatesHeadline } from '../ai/extractive.js';
 import {
   CATEGORIES,
   editionSchema,
@@ -44,7 +45,13 @@ export interface ComposeInput {
  * corroborate or summarise.
  */
 export function selectFrontPage(stories: readonly StoryCluster[]): StoryCluster[] {
-  const eligible = stories.filter((story) => story.summary.trim().length > 0);
+  // This used to test `summary.trim().length > 0`, which the extractive fallback
+  // made unfailable by returning the headline as the summary — so the guard the
+  // comment above describes was never actually applied, and a story with no
+  // reporting behind it could and did lead the paper.
+  const eligible = stories.filter(
+    (story) => story.summary.trim().length > 0 && !restatesHeadline(story.summary, story.headline),
+  );
 
   const chosen: StoryCluster[] = [];
   const perCategory = new Map<string, number>();
@@ -57,7 +64,9 @@ export function selectFrontPage(stories: readonly StoryCluster[]): StoryCluster[
     perCategory.set(story.category, used + 1);
   }
 
-  // If the diversity rule starved the page, top it up in rank order.
+  // If the diversity rule starved the page, top it up in rank order — but only
+  // from stories that are still eligible. A thin morning is not a reason to lead
+  // with a headline we could not summarise.
   if (chosen.length < FRONT_PAGE_MIN) {
     for (const story of eligible) {
       if (chosen.length >= FRONT_PAGE_MIN) break;
@@ -80,6 +89,7 @@ export function selectSections(
     saudi: [],
     middleEast: [],
     usWorld: [],
+    markets: [],
     radar: [],
   };
 
@@ -98,9 +108,8 @@ export function selectSections(
     usWorld: buckets.usWorld,
   };
 
-  if (buckets.radar.length >= RADAR_MIN_STORIES) {
-    sections.radar = buckets.radar;
-  }
+  if (buckets.markets.length > 0) sections.markets = buckets.markets;
+  if (buckets.radar.length >= RADAR_MIN_STORIES) sections.radar = buckets.radar;
 
   return sections;
 }

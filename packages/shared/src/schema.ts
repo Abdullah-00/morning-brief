@@ -114,6 +114,8 @@ export const editionSectionsSchema = z.object({
   saudi: z.array(storyClusterSchema),
   middleEast: z.array(storyClusterSchema),
   usWorld: z.array(storyClusterSchema),
+  /** Market reporting, printed under the dashboard. Optional for back editions. */
+  markets: z.array(storyClusterSchema).optional(),
   /** Spec: "Only shown when meaningful stories exist" — absent, not empty, when sparse. */
   radar: z.array(storyClusterSchema).optional(),
 });
@@ -135,10 +137,16 @@ export const editionSchema = z.object({
 });
 export type Edition = z.infer<typeof editionSchema>;
 
-/** Model output contract for one story. Spec: Step 5, structured JSON output. */
+/**
+ * Model output contract for one story. Spec: Step 5, structured JSON output.
+ *
+ * `whyItMatters` may be empty: the prompt tells the model to return an empty
+ * string rather than a circular sentence when the text supports no stake beyond
+ * the events themselves. A summary, by contrast, is the point of the call.
+ */
 export const summaryResultSchema = z.object({
   summary: z.string().min(1),
-  whyItMatters: z.string().min(1),
+  whyItMatters: z.string(),
 });
 export type SummaryResult = z.infer<typeof summaryResultSchema>;
 

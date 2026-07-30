@@ -70,3 +70,16 @@ describe('isNoise', () => {
     expect(isNoise('Oil prices slide after OPEC+ signals higher output')).toBe(false);
   });
 });
+
+describe('cleanBody — aggregator metadata', () => {
+  /** One story was summarised as "discussed in 101 comments on a post with 145 points". */
+  it('strips Hacker News link and score metadata, leaving no prose', () => {
+    const hn =
+      'Article URL: https://example.com/post Comments URL: https://news.ycombinator.com/item?id=1 Points: 145 # Comments: 101';
+    expect(cleanBody(hn)).toBe('');
+  });
+
+  it('keeps real prose that happens to mention points', () => {
+    expect(cleanBody('The index gained 45 points on Thursday.')).toContain('gained 45 points');
+  });
+});

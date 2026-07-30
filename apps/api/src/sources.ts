@@ -43,6 +43,14 @@ export interface Source {
    * football transfer stops arriving filed under Saudi Arabia.
    */
   readonly generalNews?: boolean;
+  /**
+   * A topic query rather than a `site:` query, so it returns whatever publisher
+   * Google surfaces. Useful for catching stories our site-scoped queries miss,
+   * but it also admits outlets nobody vetted — one edition carried Asaase Radio
+   * (Ghana), IndexBox and NewsBytes as sources on Saudi finance stories. Items
+   * from these are kept only when the publisher is one we already trust.
+   */
+  readonly openQuery?: boolean;
 }
 
 /**
@@ -70,6 +78,10 @@ const AI_SOURCES: Source[] = [
   { id: 'wired-ai', name: 'WIRED', url: 'https://www.wired.com/feed/tag/ai/latest/rss', tier: 'direct', category: 'ai', region: 'global', credibility: 0.8 },
   { id: 'toms-hardware', name: "Tom's Hardware", url: 'https://www.tomshardware.com/feeds/all', tier: 'direct', category: 'ai', region: 'global', credibility: 0.7 },
   { id: 'hacker-news', name: 'Hacker News', url: 'https://hnrss.org/frontpage', tier: 'direct', category: 'ai', region: 'global', credibility: 0.55 },
+  { id: 'huggingface', name: 'Hugging Face', url: 'https://huggingface.co/blog/feed.xml', tier: 'direct', category: 'ai', region: 'global', credibility: 0.85 },
+  { id: 'nvidia-blog', name: 'NVIDIA', url: 'https://blogs.nvidia.com/feed/', tier: 'direct', category: 'ai', region: 'global', credibility: 0.7 },
+  // The *category* feed was abandoned; the main one publishes daily.
+  { id: 'venturebeat', name: 'VentureBeat', url: 'https://feeds.feedburner.com/venturebeat/SZYF', tier: 'direct', category: 'ai', region: 'global', credibility: 0.75 },
 ];
 
 const SAUDI_SOURCES: Source[] = [
@@ -100,6 +112,8 @@ const US_WORLD_SOURCES: Source[] = [
   { id: 'nyt-world', name: 'The New York Times', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', tier: 'direct', category: 'global', region: 'global', credibility: 0.9 },
   { id: 'axios', name: 'Axios', url: 'https://api.axios.com/feed/', tier: 'direct', category: 'usWorld', region: 'us', credibility: 0.8 },
   { id: 'the-hill', name: 'The Hill', url: 'https://thehill.com/news/feed/', tier: 'direct', category: 'usWorld', region: 'us', credibility: 0.7 },
+  // Covers US politics and Gulf business, the two thinnest beats in the brief.
+  { id: 'semafor', name: 'Semafor', url: 'https://www.semafor.com/rss.xml', tier: 'direct', category: 'usWorld', region: 'us', credibility: 0.8, generalNews: true },
 ];
 
 const MARKETS_SOURCES: Source[] = [
@@ -107,6 +121,7 @@ const MARKETS_SOURCES: Source[] = [
   { id: 'marketwatch', name: 'MarketWatch', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories', tier: 'direct', category: 'markets', region: 'global', credibility: 0.8 },
   { id: 'yahoo-finance', name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', tier: 'direct', category: 'markets', region: 'global', credibility: 0.7 },
   { id: 'investing-com', name: 'Investing.com', url: 'https://www.investing.com/rss/news.rss', tier: 'direct', category: 'markets', region: 'global', credibility: 0.65 },
+  { id: 'economist-finance', name: 'The Economist', url: 'https://www.economist.com/finance-and-economics/rss.xml', tier: 'direct', category: 'markets', region: 'global', credibility: 0.9 },
 ];
 
 const CYBER_SOURCES: Source[] = [
@@ -117,6 +132,11 @@ const CYBER_SOURCES: Source[] = [
   { id: 'hacker-news-sec', name: 'The Hacker News', url: 'https://feeds.feedburner.com/TheHackersNews', tier: 'direct', category: 'cyber', region: 'global', credibility: 0.7 },
   { id: 'security-week', name: 'SecurityWeek', url: 'https://www.securityweek.com/feed/', tier: 'direct', category: 'cyber', region: 'global', credibility: 0.75 },
   { id: 'cisa', name: 'CISA', url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', tier: 'direct', category: 'cyber', region: 'us', credibility: 0.95 },
+  { id: 'cyberscoop', name: 'CyberScoop', url: 'https://cyberscoop.com/feed/', tier: 'direct', category: 'cyber', region: 'global', credibility: 0.8 },
+  { id: 'schneier', name: 'Schneier on Security', url: 'https://www.schneier.com/feed/atom/', tier: 'direct', category: 'cyber', region: 'global', credibility: 0.9 },
+  // Daily handler diaries — reliable cadence where Krebs publishes weekly and so
+  // usually falls outside the 48-hour freshness window.
+  { id: 'sans-isc', name: 'SANS Internet Storm Center', url: 'https://isc.sans.edu/rssfeed_full.xml', tier: 'direct', category: 'cyber', region: 'global', credibility: 0.85 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -131,8 +151,8 @@ const PROXY_SOURCES: Source[] = [
   { id: 'reuters', name: 'Reuters', url: googleNews('site:reuters.com when:1d'), tier: 'proxy', category: 'global', region: 'global', credibility: 0.95, generalNews: true },
   { id: 'ap', name: 'Associated Press', url: googleNews('site:apnews.com when:1d'), tier: 'proxy', category: 'global', region: 'global', credibility: 0.95, generalNews: true },
   { id: 'bloomberg', name: 'Bloomberg', url: googleNews('site:bloomberg.com when:1d'), tier: 'proxy', category: 'markets', region: 'global', credibility: 0.9, generalNews: true },
-  { id: 'vision-2030', name: 'Vision 2030 coverage', url: googleNews('"Vision 2030" Saudi when:1d'), tier: 'proxy', category: 'saudiTech', region: 'saudi', credibility: 0.7 },
-  { id: 'pif', name: 'PIF coverage', url: googleNews('"Public Investment Fund" Saudi when:1d'), tier: 'proxy', category: 'saudi', region: 'saudi', credibility: 0.75 },
+  { id: 'vision-2030', name: 'Vision 2030 coverage', url: googleNews('"Vision 2030" Saudi when:1d'), tier: 'proxy', category: 'saudiTech', region: 'saudi', credibility: 0.7, openQuery: true },
+  { id: 'pif', name: 'PIF coverage', url: googleNews('"Public Investment Fund" Saudi when:1d'), tier: 'proxy', category: 'saudi', region: 'saudi', credibility: 0.75, openQuery: true },
 ];
 
 export const SOURCES: readonly Source[] = [
@@ -150,6 +170,25 @@ export const SOURCES_BY_ID: ReadonlyMap<string, Source> = new Map(
 );
 
 /**
+ * Publishers an open topic query may introduce. Everything in the registry
+ * qualifies automatically; these are the additional Gulf and global outlets we
+ * are content to see cited even though we do not poll them directly.
+ */
+const EXTRA_TRUSTED_PUBLISHERS = [
+  'Financial Times', 'The Wall Street Journal', 'The Economist', 'Nikkei Asia',
+  'Zawya', 'Gulf Business', 'Arabian Gulf Business Insight', 'MEED',
+  'Asharq Al-Awsat', 'Asharq Business', 'Al Eqtisadiah', 'Saudi Exchange',
+  'Forbes Middle East', 'Fortune', 'Business Insider', 'CNBC Arabia',
+  'The Times', 'The Telegraph', 'Sky News Arabia', 'Middle East Economy',
+];
+
+export const TRUSTED_PUBLISHERS: ReadonlySet<string> = new Set(
+  [...SOURCES.map((source) => source.name), ...EXTRA_TRUSTED_PUBLISHERS].map((name) =>
+    name.toLowerCase(),
+  ),
+);
+
+/**
  * Checked and rejected — kept so a future change doesn't reintroduce them
  * without re-testing. Verified 2026-07-28.
  */
@@ -159,7 +198,11 @@ export const EXCLUDED_SOURCES = [
   { name: 'Argaam (direct RSS)', reason: '/en/rss returns HTML, not XML. Proxied.' },
   { name: 'Saudi Press Agency (direct RSS)', reason: 'rss.php returns the HTML app shell. Proxied.' },
   { name: 'CNN (direct RSS)', reason: 'endpoints abandoned — newest items dated 2024, 2023 and 2018. Proxied.' },
-  { name: 'VentureBeat AI', reason: 'category feed last published 70 days ago' },
+  { name: 'VentureBeat AI category feed', reason: 'category feed abandoned; the main VentureBeat feed is live and is used instead' },
+  { name: 'Dow Jones markets (feeds.a.dj.com/rss/RSSMarketsMain.xml)', reason: '200 with valid XML and 20 items, newest dated January 2025 — the CNN failure mode' },
+  { name: 'BIS central bank speeches', reason: 'returned no parseable items on test; revisit' },
+  { name: 'Gulf Business / Arabian Business / Talos / MSRC / S&P / IMF / Saudi Exchange', reason: '403 from our egress; would need proxying' },
+  { name: 'Google Project Zero, research.google, Import AI', reason: 'valid feeds but low cadence — usually outside the 48h window' },
   { name: 'Politico', reason: '403' },
   { name: 'Middle East Eye', reason: 'connection refused' },
   { name: 'Zawya / Khaleej Times / Gulf News / Asharq Al-Awsat', reason: '404, no working feed found' },

@@ -1,6 +1,6 @@
 import type { Article, Category, Region } from '@morning-brief/shared';
 import type { FeedItem } from '../lib/rss.js';
-import type { Source } from '../sources.js';
+import { TRUSTED_PUBLISHERS, type Source } from '../sources.js';
 
 /** Query parameters that identify a campaign, not a document. */
 const TRACKING_PARAMS = [
@@ -72,17 +72,40 @@ export function splitGoogleNewsTitle(title: string): { title: string; publisher:
 }
 
 /**
+ * Aliases the same outlet reports itself under.
+ *
+ * Corroboration count drives ranking, so an outlet appearing twice under two
+ * spellings silently promotes its stories. CNN arrives as both "CNN" and
+ * "edition.cnn"; four clusters in one edition had their rank inflated this way.
+ */
+const PUBLISHER_ALIASES: Record<string, string> = {
+  'edition.cnn': 'CNN',
+  'cnn business': 'CNN',
+  'us.cnn': 'CNN',
+  'reuters.com': 'Reuters',
+  'apnews': 'AP News',
+  'associated press': 'AP News',
+  'bloomberg.com': 'Bloomberg',
+  'ft.com': 'Financial Times',
+  'nytimes': 'The New York Times',
+  'wsj.com': 'The Wall Street Journal',
+  'aljazeera': 'Al Jazeera',
+  'arabnews': 'Arab News',
+  'thenationalnews': 'The National',
+};
+
+/**
  * Tidies a publisher name for the source chips: drops the domain suffix outlets
- * put in their feed metadata, and falls back to the registry name when the feed
- * answers in a script the rest of the page isn't set in (SPA labels itself
- * "وكالة الأنباء السعودية").
+ * put in their feed metadata, folds known aliases together, and falls back to
+ * the registry name when the feed answers in a script the rest of the page isn't
+ * set in (SPA labels itself "وكالة الأنباء السعودية").
  */
 export function cleanPublisherName(raw: string | null, fallback: string): string {
   if (!raw) return fallback;
   const cleaned = raw.replace(/\.(com|net|org|co\.uk)$/i, '').trim();
   if (cleaned.length === 0) return fallback;
   if (!/[a-z]/i.test(cleaned)) return fallback;
-  return cleaned;
+  return PUBLISHER_ALIASES[cleaned.toLowerCase()] ?? cleaned;
 }
 
 /**
@@ -129,10 +152,16 @@ const NOISE_PATTERN =
 
 /**
  * Terms that make a story matter regardless of its surface subject. A stadium
- * story is noise; a PIF stadium acquisition is Vision 2030 coverage.
+ * story is noise; a stadium *acquisition* is business coverage.
+ *
+ * Deliberately narrower than it was. "Saudi", "PIF" and "investment" used to be
+ * here, which meant any football story touching a PIF-owned club came straight
+ * back — "Who is Matthias Jaissle? What Newcastle fans can expect from the new
+ * manager" ranked second in one run. Ownership is not relevance. The override
+ * now requires a transaction, a figure, or a regulator.
  */
 const SIGNAL_OVERRIDE_PATTERN =
-  /\b(Saudi|PIF|Public Investment Fund|Vision 2030|sovereign wealth|acquisition|acquire[sd]?|merger|IPO|billion|investment|regulat|sanction|antitrust|lawsuit|policy|government|ministry)\b/i;
+  /\b(sovereign wealth|acquisition|acquire[sd]|merger|takeover bid|IPO|stake sale|\$\d|[\d.]+ ?billion|sanction(?:s|ed)|antitrust|lawsuit|regulator|ministry)\b/i;
 
 /**
  * Syndication furniture that feeds append to every description. It is not
@@ -149,6 +178,13 @@ const BOILERPLATE_PATTERNS: readonly RegExp[] = [
   /\bTo get stories like this in your inbox[^.]*\.?/i,
   /\bSign up (?:for|to) [^.]{0,80}?newsletter[^.]*\.?/i,
   /\bSubscribe to [^.]{0,80}\.?/i,
+  // Hacker News items carry no prose at all — the description is link and score
+  // metadata. Left in, it became the text a model summarised from: one story was
+  // described as "discussed in 101 comments on a post with 145 points".
+  /\bArticle URL:\s*\S*/gi,
+  /\bComments URL:\s*\S*/gi,
+  /\bPoints:\s*\d+/gi,
+  /#\s*Comments:\s*\d+/gi,
   /\bContinue reading\b.*$/i,
   /\bRead (?:more|the full story)\b.*$/i,
   /\bClick here to .*$/i,
@@ -192,6 +228,13 @@ export function normalizeItem(item: FeedItem, context: NormalizeContext): Articl
   if (title.length < 12) return null;
   if (isNoise(title)) return null;
 
+  // Topic queries return any publisher. Keep only outlets we already trust,
+  // so a keyword search cannot smuggle an unvetted site onto a Saudi story.
+  const resolvedPublisher = cleanPublisherName(publisher ?? item.publisher, source.name);
+  if (source.openQuery && !TRUSTED_PUBLISHERS.has(resolvedPublisher.toLowerCase())) {
+    return null;
+  }
+
   const url = canonicalizeUrl(item.link);
   if (!/^https?:\/\//i.test(url)) return null;
 
@@ -204,15 +247,20 @@ export function normalizeItem(item: FeedItem, context: NormalizeContext): Articl
 
   // For everything-outlets the feed's own category means nothing, so start from
   // the neutral bucket and let the headline earn a better one.
+  //
+  // Matched against the headline alone. Including the description filed an Abu
+  // Dhabi property developer's quarterly earnings under AI & Technology because
+  // the word "AI" appeared somewhere in its body — the hints only ever promote,
+  // and AI is priority 1, so one incidental mention captures the story.
   const fallbackCategory: Category = source.generalNews ? 'global' : source.category;
-  const category = inferCategory(`${title} ${item.description}`, fallbackCategory, priorityOf);
+  const category = inferCategory(title, fallbackCategory, priorityOf);
   const region: Region = source.generalNews && category === 'global' ? 'global' : source.region;
 
   return {
     id: articleId(url),
     title,
     content: isProxy ? '' : cleanBody(item.description).slice(0, 4_000),
-    source: cleanPublisherName(publisher ?? item.publisher, source.name),
+    source: resolvedPublisher,
     sourceCredibility: source.credibility,
     url,
     publishedAt: item.publishedAt,

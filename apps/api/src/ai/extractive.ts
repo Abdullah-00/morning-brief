@@ -1,12 +1,12 @@
 import type { DraftStory, SummaryResult } from '@morning-brief/shared';
-import { CATEGORIES } from '@morning-brief/shared';
 
 /**
  * The floor of the summarisation ladder: no model, no network, no invention.
  *
  * It only ever reuses sentences the publisher wrote, so its output is
  * source-grounded by construction. Stories summarised this way are flagged
- * `aiGenerated: false` and the edition records the degradation.
+ * `aiGenerated: false` and the edition records the degradation. When there is no
+ * prose to reuse it returns an empty summary — never the headline.
  */
 
 /** Splits on sentence boundaries without breaking on abbreviations or decimals. */
@@ -18,8 +18,33 @@ export function splitSentences(text: string): string[] {
     .filter((sentence) => sentence.length > 0);
 }
 
+/**
+ * Shortest prose worth extracting from. Below this there is no sentence to take
+ * that the headline has not already said.
+ *
+ * Deliberately lower than `MIN_TEXT_FOR_MODEL` (160). When the two were equal,
+ * this function only ever received an empty string — the loop below was
+ * unreachable and every call fell through to returning the headline.
+ */
+export const MIN_TEXT_FOR_EXTRACT = 60;
+
+/** True when the extracted text merely restates the headline. */
+export function restatesHeadline(summary: string, headline: string): boolean {
+  const normalise = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  const summaryText = normalise(summary);
+  const headlineText = normalise(headline);
+  if (summaryText.length === 0) return true;
+  if (summaryText === headlineText) return true;
+
+  // A summary that is the headline plus a couple of words adds nothing either.
+  return summaryText.startsWith(headlineText) && summaryText.length < headlineText.length * 1.3;
+}
+
 export function extractiveSummary(story: DraftStory): SummaryResult {
-  const sentences = splitSentences(story.sourceText);
+  const sentences =
+    story.sourceText.length >= MIN_TEXT_FOR_EXTRACT ? splitSentences(story.sourceText) : [];
 
   // Two or three sentences, per the spec, without running past a paragraph.
   const picked: string[] = [];
@@ -31,27 +56,20 @@ export function extractiveSummary(story: DraftStory): SummaryResult {
     budget -= sentence.length;
   }
 
-  const summary = picked.length > 0 ? picked.join(' ') : story.headline;
+  const extracted = picked.join(' ');
+
+  // No prose, or prose that only echoes the headline: say nothing rather than
+  // printing the headline twice. The card degrades to headline plus sources,
+  // which is honest — we genuinely have no reporting to show.
+  const summary = restatesHeadline(extracted, story.headline) ? '' : extracted;
 
   return {
+    // No "why it matters" without a model. The old template answered the
+    // question with provenance — "3 outlets are carrying this" — which the
+    // metadata row already shows as "3 sources", under a heading that promises
+    // significance. Better to omit the line than to answer a different question.
     summary,
-    whyItMatters: whyItMattersTemplate(story),
+    whyItMatters: '',
   };
 }
 
-/**
- * A stated reason for inclusion rather than an invented consequence. It says why
- * this story is in the brief — corroboration and beat — which is true by
- * construction, instead of guessing at an implication the sources never drew.
- */
-function whyItMattersTemplate(story: DraftStory): string {
-  const beat = CATEGORIES[story.category].label;
-  if (story.articleCount >= 4) {
-    return `${story.articleCount} independent outlets are carrying this, among the most widely corroborated ${beat} stories of the morning.`;
-  }
-  if (story.articleCount > 1) {
-    const outlets = story.articleCount === 2 ? 'Two outlets' : `${story.articleCount} outlets`;
-    return `${outlets} are carrying this ${beat} story so far.`;
-  }
-  return `Filed under ${beat}; only one outlet has reported it so far.`;
-}

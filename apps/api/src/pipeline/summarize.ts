@@ -1,5 +1,5 @@
 import type { DraftStory, MarketQuote, StoryCluster } from '@morning-brief/shared';
-import { extractiveSummary } from '../ai/extractive.js';
+import { extractiveSummary, restatesHeadline } from '../ai/extractive.js';
 import {
   buildMarketPrompt,
   buildStoryPrompt,
@@ -12,10 +12,21 @@ import { mapWithConcurrency } from '../lib/http.js';
 /** Below this there isn't enough reporting to summarise without inventing. */
 export const MIN_TEXT_FOR_MODEL = 160;
 
+/**
+ * Model calls allowed per edition.
+ *
+ * Bounded by subrequests, not by cost. Each `env.AI.run()` is a subrequest and
+ * the Workers free plan allows 50 per invocation; the markets call plus the D1
+ * and KV writes take about six more, so this leaves comfortable headroom. On
+ * budget it is cheap: ~39 neurons a call, so even 36 calls is under 15% of the
+ * 10,000/day free allocation.
+ */
+export const DEFAULT_MAX_MODEL_CALLS = 36;
+
 export interface SummarizeOptions {
   /** Null runs everything through the extractive fallback. */
   summarizer: Summarizer | null;
-  /** Caps model calls per run to stay inside the Workers AI free allocation. */
+  /** Caps model calls per run — see DEFAULT_MAX_MODEL_CALLS. */
   maxModelCalls?: number;
   concurrency?: number;
 }
@@ -38,7 +49,7 @@ export async function summarizeStories(
   drafts: readonly DraftStory[],
   options: SummarizeOptions,
 ): Promise<SummarizeOutcome> {
-  const { summarizer, maxModelCalls = 20, concurrency = 4 } = options;
+  const { summarizer, maxModelCalls = DEFAULT_MAX_MODEL_CALLS, concurrency = 4 } = options;
 
   const eligible = new Set<string>();
   for (const draft of drafts) {
@@ -54,7 +65,10 @@ export async function summarizeStories(
     if (summarizer && eligible.has(draft.id)) {
       const raw = await summarizer.complete(STORY_SYSTEM_PROMPT, buildStoryPrompt(draft));
       const parsed = parseSummaryResponse(raw);
-      if (parsed) {
+      // A model that just rephrases the headline has told the reader nothing;
+      // treat it as a failed response rather than printing the same sentence
+      // twice under different type.
+      if (parsed && !restatesHeadline(parsed.summary, draft.headline)) {
         return finalize(draft, parsed.summary, parsed.whyItMatters, true);
       }
       modelFailures += 1;

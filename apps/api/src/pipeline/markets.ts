@@ -238,14 +238,22 @@ export function describeMarkets(quotes: readonly MarketQuote[]): string {
     return `${quote.label} ${verb} ${move}`;
   });
 
-  const breadth =
-    risers > fallers
-      ? 'Gains outnumber declines across the board.'
-      : fallers > risers
-        ? 'Declines outnumber gains across the board.'
-        : 'Gains and declines are evenly split.';
+  // "Across the board" means every instrument, so it may only be said when one
+  // side is empty. Saying it for a bare majority produced sentences that
+  // contradicted the movers they had just named.
+  const breadth = describeBreadth(risers, fallers, priced.length);
 
   return `${phrases.join(', ')}. ${breadth}`;
+}
+
+export function describeBreadth(risers: number, fallers: number, total: number): string {
+  if (total === 0) return '';
+  if (risers === total) return 'Every instrument tracked is higher.';
+  if (fallers === total) return 'Every instrument tracked is lower.';
+  if (risers === fallers) return `Gains and declines are evenly split, ${risers} apiece.`;
+  return risers > fallers
+    ? `${risers} of ${total} instruments are higher.`
+    : `${fallers} of ${total} instruments are lower.`;
 }
 
 function formatValue(value: number): string {

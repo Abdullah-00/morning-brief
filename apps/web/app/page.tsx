@@ -39,6 +39,11 @@ export default async function HomePage() {
 
         <MarketsDashboard markets={edition.markets} />
 
+        {/* Market reporting prints directly under the dashboard it explains. */}
+        {sections.markets ? (
+          <Section id="section-markets" title={SECTION_TITLES.markets} stories={sections.markets} />
+        ) : null}
+
         {/* Absent, not empty, when nothing meaningful turned up. */}
         {sections.radar ? (
           <Section id="section-radar" title={SECTION_TITLES.radar} stories={sections.radar} />
@@ -63,6 +68,7 @@ function countSources(edition: Awaited<ReturnType<typeof loadLatestEdition>>['ed
     ...edition.sections.saudi,
     ...edition.sections.middleEast,
     ...edition.sections.usWorld,
+    ...(edition.sections.markets ?? []),
     ...(edition.sections.radar ?? []),
   ];
   return all.reduce((total, story) => total + story.articleCount, 0);

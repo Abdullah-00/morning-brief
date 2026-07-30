@@ -130,3 +130,39 @@ describe('publishedVia', () => {
     expect(composeEdition(base).publishedVia).toBe('manual');
   });
 });
+
+describe('front-page eligibility', () => {
+  /**
+   * The guard used to test `summary.trim().length > 0`, which the extractive
+   * fallback made unfailable by returning the headline. A story with no
+   * reporting behind it could lead the paper, and did.
+   */
+  it('bars a story whose summary merely repeats its headline', () => {
+    const repeated: StoryCluster = {
+      ...story('bad', 'ai', 0.99),
+      headline: 'Samsung sees robust AI demand',
+      summary: 'Samsung sees robust AI demand',
+    };
+    const front = selectFrontPage([repeated, story('good', 'saudi', 0.5)]);
+    expect(front.map((s) => s.id)).toEqual(['good']);
+  });
+
+  it('bars a story with an empty summary even when it outranks everything', () => {
+    const empty: StoryCluster = { ...story('empty', 'ai', 0.99), summary: '' };
+    const front = selectFrontPage([empty, story('good', 'saudi', 0.5)]);
+    expect(front.map((s) => s.id)).toEqual(['good']);
+  });
+
+  it('does not top up the page with ineligible stories on a thin morning', () => {
+    const empty: StoryCluster = { ...story('empty', 'ai', 0.99), summary: '' };
+    const front = selectFrontPage([empty, story('a', 'saudi', 0.5)]);
+    expect(front).toHaveLength(1);
+  });
+});
+
+describe('markets section', () => {
+  it('routes markets stories to their own section instead of nowhere', () => {
+    const sections = selectSections([story('m', 'markets', 0.5)], []);
+    expect(sections.markets?.map((s) => s.id)).toEqual(['m']);
+  });
+});

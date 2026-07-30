@@ -55,6 +55,26 @@
   `summarize.ts` gates this, and `pickLead` in `dedupe.ts` deliberately ranks
   having body text above source credibility so a bodyless wire item cannot
   become the text a summary is written from.
+- **A summary must never be the headline again.** `extractiveSummary` returns an
+  empty string when there is no prose, and `restatesHeadline` rejects both
+  extracted text and model output that merely echoes the headline. The card then
+  renders headline plus sources, which is honest. This was the single worst
+  defect the product has had: for three days every non-AI story printed its own
+  headline as its description, because `MIN_TEXT_FOR_MODEL` and `MIN_BODY_CHARS`
+  were both 160, which made the extraction branch unreachable. Keep them
+  different.
+- **Summary text must belong to the headline.** `bestSourceText` prefers the
+  lead's own body and only borrows a corroborating article's when the two
+  headlines are similar. Borrowing unconditionally described a battery-startup
+  funding round as expanding "its agentic data control plane".
+- **Sections get a reserved quota; ranking alone cannot reach them.**
+  `selectDraftClusters` exists because category weights put cyber (max 0.7475)
+  and markets (max 0.7650) permanently below the ~0.772 publication cutoff, so
+  "On My Radar" had never once printed. Do not replace it with a single global
+  sort.
+- **Model calls are capped by subrequests, not cost.** `DEFAULT_MAX_MODEL_CALLS`
+  is 36 because the free plan allows 50 subrequests per invocation and each
+  `env.AI.run()` is one.
 - **Market changes are validated before they are printed.** Each instrument has a
   `maxDailyMovePercent`; beyond it the change is withheld (`null`, rendered "—")
   rather than shown. Yahoo's history for the pegged riyal is wrong, and this is

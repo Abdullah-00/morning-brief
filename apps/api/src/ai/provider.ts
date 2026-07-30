@@ -21,17 +21,24 @@ export interface AiEnv {
 }
 
 /**
- * Default Workers AI model. An 8B instruct model costs roughly 50–200 neurons
- * per call against a 10,000/day free allocation, so a morning's worth of
- * summaries fits comfortably; a 70B model at 500–2,000 each would not.
- * Override with WORKERS_AI_MODEL.
+ * Default Workers AI model. Override with WORKERS_AI_MODEL.
  *
- * Verified against the live model catalogue, not recalled: the obvious
+ * Chosen by measurement. Against the 8B it produced strictly better copy — on a
+ * telecoms earnings story it carried a profit decline the 8B dropped — and it is
+ * roughly twice as fast, because `fp8-fast` is a throughput-optimised build.
+ *
+ * Cost, computed from published pricing and real token counts (~580 in, ~115
+ * out): 26,668 neurons/M input + 204,805/M output ≈ **39 neurons per call**, so a
+ * 21-call edition costs ~820 of the 10,000/day free allocation — about 8%. An
+ * earlier comment here claimed 70B models cost 500–2,000 neurons per call and
+ * would not fit; that came from a rough reference table and was wrong by ~25×.
+ *
+ * Verify against the live catalogue before changing this, not from memory:
  * `@cf/meta/llama-3.1-8b-instruct` was retired on 2026-05-30 and the binding
- * answers every call with error 5028. Check
- * `/accounts/{id}/ai/models/search` before changing this.
+ * answers every call with error 5028. See
+ * `GET /accounts/{id}/ai/models/search?per_page=200`.
  */
-export const DEFAULT_WORKERS_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8';
+export const DEFAULT_WORKERS_AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 export const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 
 interface WorkersAiResponse {

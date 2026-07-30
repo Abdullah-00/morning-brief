@@ -19,9 +19,7 @@ export const CATEGORY_KEYS = [
 
 export type Category = (typeof CATEGORY_KEYS)[number];
 
-/** Sections that hold story lists on the page. `markets` stories are narrative
- *  context for the markets summary rather than a standalone section. */
-export const SECTION_KEYS = ['ai', 'saudi', 'middleEast', 'usWorld', 'radar'] as const;
+export const SECTION_KEYS = ['ai', 'saudi', 'middleEast', 'usWorld', 'markets', 'radar'] as const;
 
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
@@ -44,7 +42,10 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
   middleEast: { priority: 3, weight: 0.8, label: 'Middle East', section: 'middleEast', regionBoost: 0.8 },
   usWorld: { priority: 4, weight: 0.7, label: 'US Politics & Economy', section: 'usWorld', regionBoost: 0.2 },
   global: { priority: 5, weight: 0.6, label: 'World', section: 'usWorld', regionBoost: 0.2 },
-  markets: { priority: 6, weight: 0.55, label: 'Markets', section: null, regionBoost: 0.3 },
+  // Previously `section: null`, which meant a markets story could only ever be
+  // seen if it reached the front page — and its category weight made that
+  // near-impossible. Market reporting now prints under the dashboard.
+  markets: { priority: 6, weight: 0.55, label: 'Markets', section: 'markets', regionBoost: 0.3 },
   cyber: { priority: 7, weight: 0.5, label: 'Cybersecurity & Enterprise', section: 'radar', regionBoost: 0.3 },
   saudiTech: { priority: 8, weight: 0.45, label: 'Saudi Tech & Vision 2030', section: 'radar', regionBoost: 1.0 },
 };
@@ -62,5 +63,6 @@ export const SECTION_TITLES: Record<SectionKey, string> = {
   saudi: 'Saudi Arabia',
   middleEast: 'Middle East',
   usWorld: 'US & World',
+  markets: 'Markets & Economy',
   radar: 'On My Radar',
 };

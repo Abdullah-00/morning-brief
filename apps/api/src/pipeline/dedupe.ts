@@ -202,7 +202,26 @@ function dominantCategory(articles: readonly Article[]): Category {
   return best;
 }
 
-function dominantRegion(articles: readonly Article[]): Region {
+/**
+ * The region a cluster belongs to.
+ *
+ * A proxy article's region comes from its *feed registry entry*, not from the
+ * story, so a US Treasury sanctions item carried by Arab News and Al Arabiya
+ * used to vote itself `region: saudi`. The cluster's own category is the better
+ * signal — it was inferred from the headline — so it decides wherever the two
+ * disagree, and the per-article vote only breaks ties within a category.
+ */
+function dominantRegion(articles: readonly Article[], category: Category): Region {
+  const impliedByCategory: Partial<Record<Category, Region>> = {
+    saudi: 'saudi',
+    saudiTech: 'saudi',
+    middleEast: 'middleEast',
+    usWorld: 'us',
+    global: 'global',
+  };
+  const implied = impliedByCategory[category];
+  if (implied) return implied;
+
   const counts = new Map<Region, number>();
   for (const article of articles) {
     counts.set(article.region, (counts.get(article.region) ?? 0) + 1);
@@ -398,12 +417,14 @@ export function clusterArticles(articles: readonly Article[]): ArticleCluster[] 
       .sort()
       .at(-1) as string;
 
+    const category = dominantCategory(group);
+
     clusters.push({
       id: lead.id,
       articles: group,
       lead,
-      category: dominantCategory(group),
-      region: dominantRegion(group),
+      category,
+      region: dominantRegion(group, category),
       independentSources: publishers.size,
       publishedAt,
     });
